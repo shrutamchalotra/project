@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Lending DApp</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+        background-color: #f8f8f8;
+      }
+
+      h1 {
+        text-align: center;
+        color: #333;
+      }
+
+      .container {
+        max-width: 400px;
+        margin: 0 auto;
+        background-color: #fff;
+        padding: 20px;
+        border-radius: 5px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+      }
+
+      .input-group {
+        margin-bottom: 20px;
+      }
+
+      .input-group label {
+        display: block;
+        margin-bottom: 5px;
+        color: #555;
+      }
+
+      .input-group input {
+        width: 100%;
+        padding: 10px;
+        font-size: 16px;
+        border-radius: 5px;
+        border: 1px solid #ccc;
+      }
+
+      .button-group {
+        display: flex;
+        justify-content: space-between;
+      }
+
+      .button-group button {
+        padding: 10px 20px;
+        font-size: 16px;
+        border-radius: 5px;
+        background-color: #4caf50;
+        color: #fff;
+        border: none;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+      }
+
+      .button-group button:disabled {
+        background-color: #ccc;
+        cursor: not-allowed;
+      }
+
+      .button-group button:hover {
+        background-color: #45a049;
+      }
+
+      .message {
+        margin-top: 20px;
+        padding: 10px;
+        border-radius: 5px;
+      }
+
+      .success {
+        background-color: #4caf50;
+        color: #fff;
+      }
+
+      .error {
+        background-color: #f44336;
+        color: #fff;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Lending DApp</h1>
+    <div class="container">
+      <div class="input-group">
+        <label for="amount">Loan Amount:</label>
+        <input type="number" id="amount" placeholder="Enter loan amount" />
+      </div>
+      <div class="button-group">
+        <button id="requestLoanBtn">Request Loan</button>
+        <button id="repayLoanBtn" disabled>Repay Loan</button>
+      </div>
+      <div id="message" class="message"></div>
+    </div>
+
+    <script src="https://cdn.ethers.io/lib/ethers-5.0.umd.min.js"></script>
+    <script>
+      document.addEventListener("DOMContentLoaded", async function () {
+              // Connect to Ganache local blockchain
+              const provider = new ethers.providers.JsonRpcProvider("http://localhost:7545");
+
+              const signer = provider.getSigner();
+
+              // Replace with your actual contract address
+              const contractAddress = "<>";
+              // Replace with your actual contract ABI
+              const contractAbi = [
+          {
+            "anonymous": false,
+            "inputs": [
+              {
+                "indexed": true,
+                "internalType": "address",
+                "name": "borrower",
+                "type": "address"
+              },
+              {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "amount",
+                "type": "uint256"
+              }
+            ],
+            "name": "LoanRepaid",
+            "type": "event"
+          },
+          {
+            "anonymous": false,
+            "inputs": [
+              {
+                "indexed": true,
+                "internalType": "address",
+                "name": "borrower",
+                "type": "address"
+              },
+              {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "amount",
+                "type": "uint256"
+              }
+            ],
+            "name": "LoanRequested",
+            "type": "event"
+          },
+          {
+            "inputs": [
+              {
+                "internalType": "address",
+                "name": "",
+                "type": "address"
+              }
+            ],
+            "name": "loans",
+            "outputs": [
+              {
+                "internalType": "address",
+                "name": "borrower",
+                "type": "address"
+              },
+              {
+                "internalType": "uint256",
+                "name": "amount",
+                "type": "uint256"
+              },
+              {
+                "internalType": "bool",
+                "name": "repaid",
+                "type": "bool"
+              }
+            ],
+            "stateMutability": "view",
+            "type": "function",
+            "constant": true
+          },
+          {
+            "inputs": [
+              {
+                "internalType": "uint256",
+                "name": "amount",
+                "type": "uint256"
+              }
+            ],
+            "name": "requestLoan",
+            "outputs": [],
+            "stateMutability": "nonpayable",
+            "type": "function"
+          },
+          {
+            "inputs": [],
+            "name": "repayLoan",
+            "outputs": [],
+            "stateMutability": "payable",
+            "type": "function",
+            "payable": true
+          }
+      ];
+              const lendingContract = new ethers.Contract(contractAddress, contractAbi, signer);
+
+              const requestLoanBtn = document.getElementById("requestLoanBtn");
+              const repayLoanBtn = document.getElementById("repayLoanBtn");
+              const amountInput = document.getElementById("amount");
+              const messageDiv = document.getElementById("message");
+
+              requestLoanBtn.addEventListener("click", async function () {
+                const amount = amountInput.value;
+
+                try {
+                  // Request loan
+                  const transaction = await lendingContract.requestLoan(amount);
+                  await transaction.wait();
+
+                  showMessage("Loan requested successfully", "success");
+                  disableButton(requestLoanBtn);
+                  enableButton(repayLoanBtn);
+                } catch (error) {
+                  showMessage(error.message, "error");
+                }
+              });
+
+              repayLoanBtn.addEventListener("click", async function () {
+                try {
+                  // Repay loan
+                  const transaction = await lendingContract.repayLoan({ value: amountInput.value });
+                  await transaction.wait();
+
+                  showMessage("Loan repaid successfully", "success");
+                  enableButton(requestLoanBtn);
+                  disableButton(repayLoanBtn);
+                } catch (error) {
+                  showMessage(error.message, "error");
+                }
+              });
+
+              function showMessage(message, messageType) {
+                messageDiv.textContent = message;
+                messageDiv.classList.add(messageType);
+                setTimeout(() => {
+                  messageDiv.textContent = "";
+                  messageDiv.className = "message";
+                }, 3000);
+              }
+
+              function disableButton(button) {
+                button.disabled = true;
+              }
+
+              function enableButton(button) {
+                button.disabled = false;
+              }
+            }); 
+    </script>
+  </body>
+</html>
